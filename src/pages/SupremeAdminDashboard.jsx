@@ -379,7 +379,10 @@ export default function SupremeAdminDashboard() {
                                   aadhaarCard: u.aadhaarCard || u.verificationDocument,
                                   panCard: u.panCard,
                                   formattedAddress: u.formattedAddress || u.address || 'N/A',
-                                  avatarInitials: initials
+                                  avatarInitials: initials,
+                                  experience: u.experience || 0,
+                                  rate: u.rate || 20,
+                                  description: u.description || ''
                                 });
                               }}
                               className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase px-3 py-1 rounded transition-colors active:scale-95 mr-2 cursor-pointer inline-block"
@@ -507,25 +510,37 @@ export default function SupremeAdminDashboard() {
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div>
                   <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">Email Address</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-205 block text-sm mt-0.5 select-all">{selectedWorker.email}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 block text-sm mt-0.5 select-all">{selectedWorker.email}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">Mobile Number</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-205 block text-sm mt-0.5 select-all">{selectedWorker.mobile}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 block text-sm mt-0.5 select-all">{selectedWorker.mobile}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">Age / Gender</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-205 block text-sm mt-0.5">
+                  <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block font-bold">Age / Gender</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 block text-sm mt-0.5">
                     {selectedWorker.age ? `${selectedWorker.age} years` : 'Not specified'} / {selectedWorker.gender || 'Not specified'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">Profession Category</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-205 block text-sm mt-0.5">{selectedWorker.profession || selectedWorker.skill}</span>
+                  <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block font-bold">Profession Category</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 block text-sm mt-0.5">{selectedWorker.profession || selectedWorker.skill}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block font-bold">Experience Time</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 block text-sm mt-0.5">{selectedWorker.experience} Years</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block font-bold">Hourly Rate</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 block text-sm mt-0.5">${selectedWorker.rate}/hr</span>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block">Verified Location Coordinates</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-205 block text-sm mt-0.5">{selectedWorker.formattedAddress}</span>
+                  <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block font-bold">Verified Location Coordinates</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 block text-sm mt-0.5">{selectedWorker.formattedAddress}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider block font-bold">About / Bio</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm mt-0.5 leading-relaxed whitespace-pre-wrap">{selectedWorker.description || 'No description provided.'}</p>
                 </div>
               </div>
 

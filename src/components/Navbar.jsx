@@ -115,7 +115,7 @@ export default function Navbar() {
                         Client Website
                       </Link>
 
-                      {user.role === 'customer' && (
+                      {['customer', 'admin', 'supreme-admin'].includes(user.role) && (
                         <Link
                           to="/dashboard"
                           onClick={() => setShowPortalMenu(false)}
@@ -286,7 +286,7 @@ export default function Navbar() {
                       Client Website
                     </Link>
 
-                    {user.role === 'customer' && (
+                    {['customer', 'admin', 'supreme-admin'].includes(user.role) && (
                       <Link
                         to="/dashboard"
                         onClick={toggleMenu}

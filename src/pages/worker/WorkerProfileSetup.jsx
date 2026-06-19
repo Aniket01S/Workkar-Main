@@ -11,6 +11,9 @@ export default function WorkerProfileSetup({ worker, refetchWorker }) {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('Male');
   const [profession, setProfession] = useState('Electrician');
+  const [experience, setExperience] = useState('0');
+  const [rate, setRate] = useState('20');
+  const [description, setDescription] = useState('');
 
   // Location Onboarding State
   const [latitude, setLatitude] = useState(null);
@@ -41,6 +44,9 @@ export default function WorkerProfileSetup({ worker, refetchWorker }) {
       setAge(worker.age ? String(worker.age) : '');
       setGender(worker.gender || 'Male');
       setProfession(worker.profession || 'Electrician');
+      setExperience(worker.experience !== undefined ? String(worker.experience) : '0');
+      setRate(worker.rate !== undefined ? String(worker.rate) : '20');
+      setDescription(worker.description || '');
 
       if (worker.profilePhoto) setProfilePhotoPreview(worker.profilePhoto);
       if (worker.aadhaarCard) setAadhaarCardPreview(worker.aadhaarCard);
@@ -103,6 +109,38 @@ export default function WorkerProfileSetup({ worker, refetchWorker }) {
     }
     if (!profession) errs.profession = 'Please select your profession';
 
+    if (!experience) {
+      errs.experience = 'Experience is required';
+    } else {
+      const parsedExp = parseInt(experience, 10);
+      if (isNaN(parsedExp) || parsedExp < 0) {
+        errs.experience = 'Experience must be 0 or more years';
+      }
+    }
+
+    const expYearsVal = parseInt(experience, 10) || 0;
+    let minRateVal = 10, maxRateVal = 20;
+    if (expYearsVal >= 10) {
+      minRateVal = 40; maxRateVal = 120;
+    } else if (expYearsVal >= 5) {
+      minRateVal = 25; maxRateVal = 60;
+    } else if (expYearsVal >= 2) {
+      minRateVal = 15; maxRateVal = 35;
+    }
+
+    if (!rate) {
+      errs.rate = 'Hourly rate is required';
+    } else {
+      const parsedRate = parseFloat(rate);
+      if (isNaN(parsedRate) || parsedRate < minRateVal || parsedRate > maxRateVal) {
+        errs.rate = `Hourly rate must be between $${minRateVal} and $${maxRateVal} based on your experience`;
+      }
+    }
+
+    if (!description || !description.trim()) {
+      errs.description = 'Please provide a short description about yourself';
+    }
+
     if (locationStatus !== 'granted' || latitude === null || longitude === null) {
       errs.location = 'Location access is required to register as a partner';
     }
@@ -144,6 +182,9 @@ export default function WorkerProfileSetup({ worker, refetchWorker }) {
     formData.append('age', age);
     formData.append('gender', gender);
     formData.append('profession', profession);
+    formData.append('experience', experience);
+    formData.append('rate', rate);
+    formData.append('description', description);
     formData.append('latitude', latitude);
     formData.append('longitude', longitude);
 
@@ -182,6 +223,16 @@ export default function WorkerProfileSetup({ worker, refetchWorker }) {
     'Technician',
     'Other',
   ];
+
+  const expYears = parseInt(experience, 10) || 0;
+  let minRate = 10, maxRate = 20;
+  if (expYears >= 10) {
+    minRate = 40; maxRate = 120;
+  } else if (expYears >= 5) {
+    minRate = 25; maxRate = 60;
+  } else if (expYears >= 2) {
+    minRate = 15; maxRate = 35;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-10 px-4 sm:px-6 lg:px-8 transition-colors">
@@ -297,13 +348,13 @@ export default function WorkerProfileSetup({ worker, refetchWorker }) {
               </div>
             </div>
 
-            {/* Section 2: Profession details */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4 flex flex-col justify-between">
+            {/* Section 2: Profession & Details */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
               <div>
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-50 dark:border-slate-800 mb-4">
                   <Briefcase className="text-blue-600 dark:text-blue-400" size={20} />
                   <h2 className="font-bold text-lg text-slate-800 dark:text-slate-100">
-                    Your Profession
+                    Professional Details
                   </h2>
                 </div>
 
@@ -326,9 +377,68 @@ export default function WorkerProfileSetup({ worker, refetchWorker }) {
                 )}
               </div>
 
-              {/* Helper disclaimer */}
-              <div className="bg-orange-50 dark:bg-orange-500/10 p-4 rounded-xl border border-orange-500/15 text-xs leading-relaxed text-orange-700 dark:text-orange-400 font-medium mt-4 md:mt-0">
-                You will be listed under this profession. Clients searching for this category will be matched with you based on your proximity.
+              <div className="grid grid-cols-2 gap-4">
+                {/* Experience */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Years of Experience
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 5"
+                    value={experience}
+                    onChange={(e) => setExperience(e.target.value)}
+                    className={`mt-1.5 block w-full px-4 py-3 border ${
+                      errors.experience ? 'border-red-300' : 'border-slate-200 dark:border-slate-800'
+                    } bg-white dark:bg-slate-950 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm text-slate-900 dark:text-white transition-all`}
+                  />
+                  {errors.experience && (
+                    <p className="mt-1 text-xs text-red-500 font-semibold">{errors.experience}</p>
+                  )}
+                </div>
+
+                {/* Hourly Rate */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Hourly Rate ($/hr)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 25"
+                    value={rate}
+                    onChange={(e) => setRate(e.target.value)}
+                    className={`mt-1.5 block w-full px-4 py-3 border ${
+                      errors.rate ? 'border-red-300' : 'border-slate-200 dark:border-slate-800'
+                    } bg-white dark:bg-slate-950 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm text-slate-900 dark:text-white transition-all`}
+                  />
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-1 block">
+                    Allowed Range: ${minRate} - ${maxRate}/hr based on your experience
+                  </span>
+                  {errors.rate && (
+                    <p className="mt-1 text-xs text-red-500 font-semibold">{errors.rate}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  About You (Description)
+                </label>
+                <textarea
+                  rows="3"
+                  placeholder="Describe your skills, tools you use, services you offer..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className={`mt-1.5 block w-full px-4 py-3 border ${
+                    errors.description ? 'border-red-300' : 'border-slate-200 dark:border-slate-800'
+                  } bg-white dark:bg-slate-950 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm text-slate-900 dark:text-white transition-all resize-none`}
+                />
+                {errors.description && (
+                  <p className="mt-1 text-xs text-red-500 font-semibold">{errors.description}</p>
+                )}
               </div>
             </div>
           </div>

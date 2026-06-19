@@ -15,6 +15,10 @@ import path from 'path';
 // Load environment variables
 dotenv.config();
 
+// Safe development defaults for out-of-the-box cloning
+process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/workkar';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'workkar_jwt_secret_key_67890_dev';
+
 // Connect to Database
 connectDB();
 

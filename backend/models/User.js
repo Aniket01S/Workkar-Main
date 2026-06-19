@@ -16,11 +16,11 @@ const BookingSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   status: { 
     type: String, 
-    enum: ['Pending', 'Accepted', 'En Route', 'In Progress', 'Completed', 'Declined', 'Cancelled'],
+    enum: ['Pending', 'Accepted', 'En Route', 'In Progress', 'Completed', 'Declined', 'Cancelled', 'Pending Approval'],
     default: 'Pending'
   },
   date: { type: Date, default: Date.now }
-});
+}, { id: false });
 
 const NotificationSchema = new mongoose.Schema({
   id: { type: String, required: true },

@@ -1,6 +1,7 @@
 import express from 'express';
 import User from '../models/User.js';
 import Worker from '../models/Worker.js';
+import Message from '../models/Message.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -21,7 +22,7 @@ const updateCustomerBooking = async (customerId, jobId, status, notificationText
   try {
     const customer = await User.findById(customerId);
     if (customer) {
-      const booking = customer.bookings.find(b => b.id === jobId);
+      const booking = customer.bookings.find(b => b.get('id') === jobId);
       if (booking) {
         booking.status = status;
         customer.markModified('bookings');
@@ -206,7 +207,7 @@ router.put('/start', protect, authorize('worker'), async (req, res) => {
   }
 });
 
-// @desc    Complete job (Worker)
+// @desc    Complete job (Worker requests approval)
 // @route   PUT /api/jobs/complete
 router.put('/complete', protect, authorize('worker'), async (req, res) => {
   try {
@@ -220,28 +221,144 @@ router.put('/complete', protect, authorize('worker'), async (req, res) => {
     const jobId = worker.activeJob.id;
     const workerName = isNew ? worker.fullName : worker.name;
 
+    // Set step to 4 and status to Pending Approval
+    worker.activeJob.step = 4;
+    worker.activeJob.status = 'Pending Approval';
+    worker.markModified('activeJob');
+    await worker.save();
+
+    if (customerId) {
+      await updateCustomerBooking(
+        customerId,
+        jobId,
+        'Pending Approval',
+        `Worker ${workerName} has marked service #${jobId} as completed. Please review and approve to release payment.`,
+        'warning'
+      );
+    }
+
+    res.json({
+      message: 'Job marked as complete. Pending client approval.',
+      activeJob: worker.activeJob
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error requesting job completion', error: error.message });
+  }
+});
+
+// @desc    Approve job completion (Customer pays worker & closes job)
+// @route   PUT /api/jobs/approve-complete
+router.put('/approve-complete', protect, async (req, res) => {
+  const { jobId } = req.body;
+  try {
+    if (!jobId) {
+      return res.status(400).json({ message: 'Job ID is required' });
+    }
+
+    // Find worker holding this active job
+    let worker = await User.findOne({ 'activeJob.id': jobId });
+    let isNew = false;
+    if (!worker) {
+      worker = await Worker.findOne({ 'activeJob.id': jobId });
+      if (worker) isNew = true;
+    }
+
+    if (!worker || !worker.activeJob) {
+      return res.status(404).json({ message: 'Active job record not found' });
+    }
+
+    // Verify authorized customer
+    if (worker.activeJob.customerId !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to approve this job completion' });
+    }
+
+    const customerId = worker.activeJob.customerId;
+    const workerName = isNew ? worker.fullName : worker.name;
     const earnAmount = worker.activeJob.total;
     const baseEarn = worker.activeJob.base;
     const tipEarn = earnAmount - baseEarn;
 
-    // Credit earnings
+    // Credit worker's earnings
     worker.wallet.balance += earnAmount;
     worker.wallet.weekly += earnAmount;
     worker.wallet.jobEarnings += baseEarn;
     worker.wallet.tips += tipEarn;
 
-    // Reset status and clear active job
+    // Reset status & release worker back to pool
     worker.activeJob = undefined;
     worker.availability = isNew ? true : 'Available';
     await worker.save();
 
-    if (customerId) {
-      await updateCustomerBooking(customerId, jobId, 'Completed', `Worker ${workerName} has completed service on your booking #${jobId}! You can now leave a review.`, 'success');
+    // Close booking on customer record
+    await updateCustomerBooking(
+      customerId,
+      jobId,
+      'Completed',
+      `You approved completion for job #${jobId}. Payout of $${earnAmount.toFixed(2)} sent to ${workerName}. You can now write a review!`,
+      'success'
+    );
+
+    res.json({
+      message: `Job #${jobId} approved! Payment released successfully.`,
+      wallet: worker.wallet
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error approving job completion', error: error.message });
+  }
+});
+
+// @desc    Get all messages for a job
+// @route   GET /api/jobs/messages/:jobId
+router.get('/messages/:jobId', protect, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const messages = await Message.find({ jobId }).sort({ createdAt: 1 });
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error retrieving messages', error: error.message });
+  }
+});
+
+// @desc    Send a message for a job
+// @route   POST /api/jobs/messages
+router.post('/messages', protect, async (req, res) => {
+  const { jobId, text } = req.body;
+  try {
+    if (!text || !text.trim()) {
+      return res.status(400).json({ message: 'Message text is required' });
     }
 
-    res.json({ message: `Job completed! Credited $${earnAmount.toFixed(2)} to your wallet.`, wallet: worker.wallet });
+    // Verify user is either worker or client on this active job
+    let worker = await User.findOne({ 'activeJob.id': jobId });
+    let isNew = false;
+    if (!worker) {
+      worker = await Worker.findOne({ 'activeJob.id': jobId });
+      if (worker) isNew = true;
+    }
+
+    if (!worker || !worker.activeJob) {
+      return res.status(400).json({ message: 'Chat is locked. Active job not found.' });
+    }
+
+    const isWorker = worker._id.toString() === req.user._id.toString();
+    const isCustomer = worker.activeJob.customerId === req.user._id.toString();
+
+    if (!isWorker && !isCustomer) {
+      return res.status(403).json({ message: 'Not authorized to chat on this job' });
+    }
+
+    const senderName = isWorker ? (isNew ? worker.fullName : worker.name) : req.user.name;
+
+    const message = await Message.create({
+      jobId,
+      senderId: req.user._id.toString(),
+      senderName,
+      text: text.trim()
+    });
+
+    res.status(201).json(message);
   } catch (error) {
-    res.status(500).json({ message: 'Server error completing job', error: error.message });
+    res.status(500).json({ message: 'Server error sending message', error: error.message });
   }
 });
 
@@ -305,7 +422,7 @@ router.put('/cancel/:jobId', protect, async (req, res) => {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const booking = user.bookings.find(b => b.id === req.params.jobId);
+    const booking = user.bookings.find(b => b.get('id') === req.params.jobId);
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }

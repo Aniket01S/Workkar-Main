@@ -57,7 +57,7 @@ export const updateWorkerProfile = async (req, res) => {
       return res.status(404).json({ message: 'Worker not found' });
     }
 
-    const { fullName, age, gender, profession, latitude, longitude, formattedAddress } = req.body;
+    const { fullName, age, gender, profession, latitude, longitude, formattedAddress, experience, rate, description } = req.body;
     const errors = {};
 
     // Validate inputs
@@ -76,6 +76,33 @@ export const updateWorkerProfile = async (req, res) => {
 
     if (!profession || !profession.trim()) {
       errors.profession = 'Profession is required';
+    }
+
+    // Validate new professional fields
+    let expYearsVal = 0;
+    if (experience !== undefined && experience !== null) {
+      const parsedExp = parseInt(experience, 10);
+      if (isNaN(parsedExp) || parsedExp < 0) {
+        errors.experience = 'Experience must be 0 or more years';
+      } else {
+        expYearsVal = parsedExp;
+      }
+    }
+
+    if (rate !== undefined && rate !== null) {
+      const parsedRate = parseFloat(rate);
+      let minRateVal = 10, maxRateVal = 20;
+      if (expYearsVal >= 10) {
+        minRateVal = 40; maxRateVal = 120;
+      } else if (expYearsVal >= 5) {
+        minRateVal = 25; maxRateVal = 60;
+      } else if (expYearsVal >= 2) {
+        minRateVal = 15; maxRateVal = 35;
+      }
+
+      if (isNaN(parsedRate) || parsedRate < minRateVal || parsedRate > maxRateVal) {
+        errors.rate = `Hourly rate must be between $${minRateVal} and $${maxRateVal} based on your experience level`;
+      }
     }
 
     if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) {
@@ -112,6 +139,9 @@ export const updateWorkerProfile = async (req, res) => {
     worker.age = parseInt(age, 10);
     worker.gender = gender;
     worker.profession = profession;
+    worker.experience = experience !== undefined ? parseInt(experience, 10) : worker.experience;
+    worker.rate = rate !== undefined ? parseFloat(rate) : worker.rate;
+    worker.description = description !== undefined ? description.trim() : worker.description;
     worker.profilePhoto = profilePhotoPath;
     worker.aadhaarCard = aadhaarCardPath;
     worker.panCard = panCardPath;

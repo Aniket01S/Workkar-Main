@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useWorkkar } from '../context/WorkkarContext';
 import DashboardCard from '../components/DashboardCard';
+import ChatBox from '../components/ChatBox';
 
 export default function CustomerDashboard() {
   const {
@@ -13,7 +14,8 @@ export default function CustomerDashboard() {
     markSingleNotificationRead,
     clearNotifications,
     addNotification,
-    workers
+    workers,
+    approveJobCompletion
   } = useWorkkar();
 
   // Review modal state
@@ -22,6 +24,12 @@ export default function CustomerDashboard() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Active chat state
+  const [activeChatJobId, setActiveChatJobId] = useState(null);
+  const toggleChat = (jobId) => {
+    setActiveChatJobId(prev => prev === jobId ? null : jobId);
+  };
 
   // Past booking invoice detail modal
   const [selectedBookingForReceipt, setSelectedBookingForReceipt] = useState(null);
@@ -58,7 +66,7 @@ export default function CustomerDashboard() {
   const notificationsList = [...(user.notifications || [])].reverse(); // newest first
 
   const activeBookings = bookingsList.filter(b => 
-    ['Pending', 'Accepted', 'En Route', 'In Progress'].includes(b.status)
+    ['Pending', 'Accepted', 'En Route', 'In Progress', 'Pending Approval'].includes(b.status)
   );
   const completedBookings = bookingsList.filter(b => b.status === 'Completed');
   const totalSpent = completedBookings.reduce((sum, b) => sum + b.total, 0);
@@ -93,6 +101,8 @@ export default function CustomerDashboard() {
         return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-500/20';
       case 'Pending':
         return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-500/20';
+      case 'Pending Approval':
+        return 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-500/20';
       case 'Accepted':
       case 'En Route':
         return 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-500/20';
@@ -227,7 +237,9 @@ export default function CustomerDashboard() {
               ) : (
                 <div className="space-y-6">
                   {activeBookings.map((booking) => {
-                    const step = booking.status === 'Pending' ? 1 : (['Accepted', 'En Route'].includes(booking.status) ? 2 : 3);
+                    const step = booking.status === 'Pending' ? 1 : 
+                                 (['Accepted', 'En Route'].includes(booking.status) ? 2 : 
+                                 (booking.status === 'In Progress' ? 3 : 4));
                     const workerDetail = workers.find(w => w.id === booking.workerId);
                     return (
                       <div key={booking.id} className="p-5 bg-surface-container-low/60 rounded-xl border border-outline-variant/30 space-y-6 hover:shadow-md transition-shadow">
@@ -245,73 +257,92 @@ export default function CustomerDashboard() {
                         </div>
 
                         {/* Worker Detail Info Panel */}
-                        {workerDetail && (
-                          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-surface-container-lowest/80 rounded-xl border border-outline-variant/20 shadow-sm transition-all duration-200">
-                            <div className="flex items-center gap-3">
-                              {workerDetail.avatar ? (
-                                <img
-                                  src={workerDetail.avatar}
-                                  alt={workerDetail.name}
-                                  className="w-12 h-12 rounded-xl object-cover border border-outline-variant/30 shadow-sm"
-                                />
-                              ) : (
-                                <div className="w-12 h-12 rounded-xl bg-primary-fixed flex items-center justify-center text-primary font-bold text-lg border border-outline-variant/30 shadow-sm">
-                                  {workerDetail.textAvatar || workerDetail.name.substring(0, 2)}
-                                </div>
-                              )}
-                              <div>
-                                <div className="flex items-center gap-1.5">
-                                  <h4 className="font-bold text-on-surface text-sm">{workerDetail.name}</h4>
-                                  {workerDetail.verified && (
-                                    <span className="material-symbols-outlined text-green-600 text-[16px] fill" title="Verified Worker">
-                                      verified
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-on-surface-variant text-[11px] font-medium leading-none mt-1">
-                                  {workerDetail.skillTitle} • {workerDetail.experience} yrs exp
-                                </p>
-                                <div className="flex items-center gap-1 mt-1 text-[11px] font-bold text-primary">
-                                  <span className="material-symbols-outlined text-[13px] text-amber-500 fill">star</span>
-                                  <span>{workerDetail.rating ? workerDetail.rating.toFixed(1) : '5.0'}</span>
-                                  <span className="text-on-surface-variant font-medium">•</span>
-                                  <span>${workerDetail.rate}/hr</span>
+                        {(() => {
+                          const wName = workerDetail?.name || booking.workerName || 'Worker Partner';
+                          const wSkill = workerDetail?.skillTitle || booking.skill || 'Service Professional';
+                          const wExp = workerDetail?.experience !== undefined ? `${workerDetail.experience} yrs exp` : 'Verified Provider';
+                          const wRate = workerDetail?.rate !== undefined ? `$${workerDetail.rate}/hr` : 'Custom rate';
+                          const wRating = workerDetail?.rating ? workerDetail.rating.toFixed(1) : '5.0';
+                          const hasAvatar = !!workerDetail?.avatar;
+                          const wAvatar = workerDetail?.avatar;
+                          const wTextAvatar = workerDetail?.textAvatar || wName.substring(0, 2).toUpperCase();
+                          const isVerified = workerDetail?.verified ?? true;
+
+                          return (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-surface-container-lowest/80 rounded-xl border border-outline-variant/20 shadow-sm transition-all duration-200">
+                              <div className="flex items-center gap-3">
+                                {hasAvatar ? (
+                                  <img
+                                    src={wAvatar}
+                                    alt={wName}
+                                    className="w-12 h-12 rounded-xl object-cover border border-outline-variant/30 shadow-sm"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-xl bg-primary-fixed flex items-center justify-center text-primary font-bold text-lg border border-outline-variant/30 shadow-sm">
+                                    {wTextAvatar}
+                                  </div>
+                                )}
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <h4 className="font-bold text-on-surface text-sm">{wName}</h4>
+                                    {isVerified && (
+                                      <span className="material-symbols-outlined text-green-600 text-[16px] fill" title="Verified Worker">
+                                        verified
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-on-surface-variant text-[11px] font-medium leading-none mt-1">
+                                    {wSkill} • {wExp}
+                                  </p>
+                                  <div className="flex items-center gap-1 mt-1 text-[11px] font-bold text-primary">
+                                    <span className="material-symbols-outlined text-[13px] text-amber-500 fill">star</span>
+                                    <span>{wRating}</span>
+                                    <span className="text-on-surface-variant font-medium">•</span>
+                                    <span>{wRate}</span>
+                                  </div>
                                 </div>
                               </div>
+                              
+                              {/* Call & Message Actions */}
+                              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                                <button
+                                  onClick={() => addNotification(`Calling ${wName}...`, 'success')}
+                                  className="bg-surface-container-high hover:bg-surface-variant text-primary p-2.5 rounded-xl flex items-center justify-center transition-colors border border-outline-variant/10 shadow-sm cursor-pointer"
+                                  title={`Call ${wName}`}
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">call</span>
+                                </button>
+                                {['Accepted', 'En Route', 'In Progress', 'Pending Approval'].includes(booking.status) && (
+                                  <button
+                                    onClick={() => toggleChat(booking.id)}
+                                    className={`p-2.5 rounded-xl flex items-center justify-center transition-colors border shadow-sm cursor-pointer ${
+                                      activeChatJobId === booking.id
+                                        ? 'bg-blue-600 border-blue-600 text-white font-bold'
+                                        : 'bg-surface-container-high hover:bg-surface-variant border-outline-variant/10 text-primary'
+                                    }`}
+                                    title={`Message ${wName}`}
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">chat</span>
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                            
-                            {/* Call & Message Actions */}
-                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                              <button
-                                onClick={() => addNotification(`Calling ${workerDetail.name}...`, 'success')}
-                                className="bg-surface-container-high hover:bg-surface-variant text-primary p-2.5 rounded-xl flex items-center justify-center transition-colors border border-outline-variant/10 shadow-sm cursor-pointer"
-                                title={`Call ${workerDetail.name}`}
-                              >
-                                <span className="material-symbols-outlined text-[18px]">call</span>
-                              </button>
-                              <button
-                                onClick={() => addNotification(`Opening live chat with ${workerDetail.name}...`, 'success')}
-                                className="bg-surface-container-high hover:bg-surface-variant text-primary p-2.5 rounded-xl flex items-center justify-center transition-colors border border-outline-variant/10 shadow-sm cursor-pointer"
-                                title={`Message ${workerDetail.name}`}
-                              >
-                                <span className="material-symbols-outlined text-[18px]">chat</span>
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                          );
+                        })()}
 
                         {/* Interactive Steps Progress Tracker */}
                         <div className="relative pt-2">
                           <div className="absolute top-1/2 left-0 right-0 h-1 bg-outline-variant/20 -translate-y-1/2 z-0"></div>
                           <div 
                             className="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 z-0 transition-all duration-500"
-                            style={{ width: `${((step - 1) / 2) * 100}%` }}
+                            style={{ width: `${((step - 1) / 3) * 100}%` }}
                           ></div>
                           <div className="relative flex justify-between z-10">
                             {[
                               { label: 'Requested', icon: 'pending_actions', text: 'Waiting for worker' },
                               { label: 'Accepted', icon: 'local_shipping', text: 'Worker is en route' },
-                              { label: 'In Progress', icon: 'engineering', text: 'Service started' }
+                              { label: 'In Progress', icon: 'engineering', text: 'Service started' },
+                              { label: 'Review', icon: 'rate_review', text: 'Approval needed' }
                             ].map((s, idx) => {
                               const active = step >= idx + 1;
                               return (
@@ -425,6 +456,60 @@ export default function CustomerDashboard() {
                             >
                               Cancel Booking
                             </button>
+                          </div>
+                        )}
+
+                        {/* Completion Approval / Release Payout Banners */}
+                        {booking.status === 'Pending Approval' && (
+                          <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                            <div className="space-y-1">
+                              <h4 className="font-bold text-amber-800 dark:text-amber-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[16px] text-amber-600 dark:text-amber-400 animate-pulse">lock_open</span>
+                                Completion Approval Needed
+                              </h4>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                The worker has marked this service as completed. Release the payout of <span className="font-bold text-on-surface">${booking.total.toFixed(2)}</span> once you verify the work.
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => approveJobCompletion(booking.id)}
+                              className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs uppercase tracking-wider transition-all shadow-sm active:scale-95 border-none cursor-pointer flex items-center gap-1.5 shrink-0"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">payments</span>
+                              Approve & Pay
+                            </button>
+                          </div>
+                        )}
+
+                        {booking.status === 'In Progress' && (
+                          <div className="bg-slate-50 dark:bg-slate-900/40 border border-outline-variant/20 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                            <div className="space-y-1">
+                              <h4 className="font-bold text-on-surface text-xs uppercase tracking-wider flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-[16px] text-primary">engineering</span>
+                                Ongoing Service
+                              </h4>
+                              <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                                Once the service is finished to your satisfaction, you can release the payment of <span className="font-bold text-on-surface">${booking.total.toFixed(2)}</span> to complete the job and write a review.
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => approveJobCompletion(booking.id)}
+                              className="px-4 py-2.5 bg-primary hover:bg-primary/95 text-on-primary rounded-lg font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm active:scale-95 border-none cursor-pointer flex items-center gap-1.5 shrink-0"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                              Release Payout
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Live Chat Box */}
+                        {activeChatJobId === booking.id && (
+                          <div className="mt-4 border-t border-outline-variant/10 pt-4">
+                            <ChatBox 
+                              jobId={booking.id} 
+                              currentUserId={user._id} 
+                              title={`Chat with ${booking.workerName}`} 
+                            />
                           </div>
                         )}
                       </div>

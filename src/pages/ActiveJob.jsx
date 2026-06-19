@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkkar } from '../context/WorkkarContext';
+import ChatBox from '../components/ChatBox';
 
 export default function ActiveJob() {
   const {
@@ -263,14 +264,15 @@ export default function ActiveJob() {
                     >
                       <span className="material-symbols-outlined text-[20px]">call</span>
                     </button>
-                    <button 
-                      onClick={() => addNotification(`Opening chat message box with ${activeJob.customerName}...`, 'success')}
-                      className="bg-surface-container-high hover:bg-surface-variant text-primary p-2.5 rounded-lg flex items-center justify-center transition-colors border border-outline-variant/10 shadow-sm"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">chat</span>
-                    </button>
                   </div>
                 </div>
+
+                {/* Live Chat Box */}
+                <ChatBox 
+                  jobId={activeJob.id} 
+                  currentUserId={user._id} 
+                  title={`Chat with Client (${activeJob.customerName})`} 
+                />
 
               </div>
 
@@ -329,9 +331,9 @@ export default function ActiveJob() {
                   )}
 
                   {activeJob.step === 4 && (
-                    <div className="w-full bg-surface-container-high border border-outline-variant/30 text-on-surface-variant py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 text-center transition-colors duration-250">
-                      <span className="material-symbols-outlined text-[18px] text-emerald-600 fill">check_circle</span>
-                      Job Completed
+                    <div className="w-full bg-amber-50 border border-amber-200 text-amber-700 dark:bg-amber-950/20 dark:border-amber-900/50 dark:text-amber-400 py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 text-center">
+                      <div className="w-3.5 h-3.5 border-2 border-amber-600 dark:border-amber-400 border-t-transparent rounded-full animate-spin"></div>
+                      Pending Client Approval
                     </div>
                   )}
 

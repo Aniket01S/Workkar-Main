@@ -43,6 +43,18 @@ const WorkerSchema = new mongoose.Schema({
   profession: {
     type: String
   },
+  experience: {
+    type: Number,
+    default: 0
+  },
+  rate: {
+    type: Number,
+    default: 20
+  },
+  description: {
+    type: String,
+    default: ''
+  },
   profilePhoto: {
     type: String
   },

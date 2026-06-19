@@ -263,7 +263,10 @@ export const WorkkarProvider = ({ children }) => {
     profilePhoto: w.profilePhoto,
     aadhaarCard: w.aadhaarCard,
     panCard: w.panCard,
-    formattedAddress: w.formattedAddress || 'Not confirmed'
+    formattedAddress: w.formattedAddress || 'Not confirmed',
+    experience: w.experience || 0,
+    rate: w.rate || 20,
+    description: w.description || ''
   }));
 
   // Computed state for active job & incoming alert
@@ -468,12 +471,68 @@ export const WorkkarProvider = ({ children }) => {
       });
       if (res.ok) {
         const updated = await res.json();
-        setUser(prev => ({ ...prev, activeJob: undefined, wallet: updated.wallet }));
-        addNotification(`Job completed! Credited earnings to your wallet.`, "success");
+        setUser(prev => ({ ...prev, activeJob: updated.activeJob }));
+        addNotification("Job completed! Requested customer approval.", "success");
         fetchWorkers();
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const approveJobCompletion = async (jobId) => {
+    try {
+      const res = await fetch(`${API_URL}/jobs/approve-complete`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ jobId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addNotification(data.message, "success");
+        fetchUser();
+        fetchWorkers();
+        return true;
+      } else {
+        addNotification(data.message || "Failed to approve completion", "error");
+        return false;
+      }
+    } catch (err) {
+      console.error(err);
+      addNotification("Error approving job completion", "error");
+      return false;
+    }
+  };
+
+  const getMessages = async (jobId) => {
+    try {
+      const res = await fetch(`${API_URL}/jobs/messages/${encodeURIComponent(jobId)}`, {
+        headers: getAuthHeaders()
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      return [];
+    } catch (err) {
+      console.error("Error fetching messages:", err);
+      return [];
+    }
+  };
+
+  const sendMessage = async (jobId, text) => {
+    try {
+      const res = await fetch(`${API_URL}/jobs/messages`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ jobId, text })
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+      return null;
+    } catch (err) {
+      console.error("Error sending message:", err);
+      return null;
     }
   };
 
@@ -732,7 +791,7 @@ export const WorkkarProvider = ({ children }) => {
 
   const cancelBooking = async (jobId) => {
     try {
-      const res = await fetch(`${API_URL}/jobs/cancel/${jobId}`, {
+      const res = await fetch(`${API_URL}/jobs/cancel/${encodeURIComponent(jobId)}`, {
         method: 'PUT',
         headers: getAuthHeaders()
       });
@@ -875,7 +934,10 @@ export const WorkkarProvider = ({ children }) => {
       submitReview,
       markNotificationsRead,
       markSingleNotificationRead,
-      clearNotifications
+      clearNotifications,
+      approveJobCompletion,
+      getMessages,
+      sendMessage
     }}>
       {children}
     </WorkkarContext.Provider>
