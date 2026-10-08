@@ -6,7 +6,8 @@ import {
 
 const WorkkarContext = createContext();
 
-const API_URL = 'http://localhost:5000/api';
+const BASE_SERVER_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || `${BASE_SERVER_URL}/api`;
 
 export const WorkkarProvider = ({ children }) => {
   // Authentication states
