@@ -71,15 +71,9 @@ const seedDatabase = async () => {
       console.log(`Supreme Admin exists: ${supremeEmail}`);
     }
 
-    // 2. Seed other initial accounts if empty
-    const workerCount = await User.countDocuments({ role: 'worker' });
+    // 2. Seed Admin if missing
     const adminCount = await User.countDocuments({ role: 'admin' });
-    const customerCount = await User.countDocuments({ role: 'customer' });
-
-    if (workerCount === 0 && adminCount === 0 && customerCount === 0) {
-      console.log('Database is empty. Seeding initial users...');
-
-      // Seed Admin
+    if (adminCount === 0) {
       await User.create({
         name: 'Admin Coordinator',
         email: 'admin@workkar.com',
@@ -88,8 +82,11 @@ const seedDatabase = async () => {
         status: 'active'
       });
       console.log('Seeded Admin: admin@workkar.com / adminpassword');
+    }
 
-      // Seed Customer
+    // 3. Seed Customer if missing
+    const customerCount = await User.countDocuments({ role: 'customer' });
+    if (customerCount === 0) {
       await User.create({
         name: 'Alex Mercer',
         email: 'customer@workkar.com',
@@ -100,8 +97,12 @@ const seedDatabase = async () => {
         phone: '555-0199'
       });
       console.log('Seeded Customer: customer@workkar.com / customerpassword');
+    }
 
-      // Seed Workers
+    // 4. Seed Workers if missing
+    const workerCount = await User.countDocuments({ role: 'worker' });
+    if (workerCount === 0) {
+      console.log('No workers found. Seeding initial workers...');
       const initialWorkers = [
         {
           name: "Marcus Johnson",
