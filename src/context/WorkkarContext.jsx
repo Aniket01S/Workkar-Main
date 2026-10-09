@@ -9,6 +9,22 @@ const WorkkarContext = createContext();
 const BASE_SERVER_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '') : 'http://localhost:5000';
 const API_URL = import.meta.env.VITE_API_URL || `${BASE_SERVER_URL}/api`;
 
+const parseJsonResponse = async (res) => {
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return await res.json();
+  }
+  const text = await res.text();
+  if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+    throw new Error('Backend server unreachable or VITE_API_URL missing/incorrect. Please check Vercel environment variables & redeploy.');
+  }
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error('Invalid response from server.');
+  }
+};
+
 export const WorkkarProvider = ({ children }) => {
   // Authentication states
   const [user, setUser] = useState(null);
@@ -300,7 +316,7 @@ export const WorkkarProvider = ({ children }) => {
         body: JSON.stringify({ email, password })
       });
 
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) {
         throw new Error(data.message || 'Login failed');
       }
@@ -322,7 +338,7 @@ export const WorkkarProvider = ({ children }) => {
         body: JSON.stringify({ credential })
       });
 
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) {
         throw new Error(data.message || 'Google Sign-In failed');
       }
@@ -345,7 +361,7 @@ export const WorkkarProvider = ({ children }) => {
         body: JSON.stringify(formData)
       });
 
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok) {
         throw new Error(data.message || 'Registration failed');
       }
