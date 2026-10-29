@@ -76,7 +76,9 @@ export const WorkkarProvider = ({ children }) => {
   // Helper for auth headers
   const getAuthHeaders = () => {
     const isWorkerPath = window.location.pathname.startsWith('/worker');
-    const activeToken = isWorkerPath && workerToken ? workerToken : token;
+    // Use workerToken if: on worker path, OR workerToken exists but no regular token
+    const useWorkerAuth = workerToken && (isWorkerPath || !token);
+    const activeToken = useWorkerAuth ? workerToken : token;
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${activeToken}`
@@ -87,8 +89,10 @@ export const WorkkarProvider = ({ children }) => {
   useEffect(() => {
     const fetchMe = async () => {
       const isWorkerPath = window.location.pathname.startsWith('/worker');
-      const activeToken = isWorkerPath && workerToken ? workerToken : token;
-      const endpoint = isWorkerPath && workerToken ? `${API_URL}/auth/worker/me` : `${API_URL}/auth/me`;
+      // Use workerToken if: on worker path, OR workerToken exists but no regular token
+      const useWorkerAuth = workerToken && (isWorkerPath || !token);
+      const activeToken = useWorkerAuth ? workerToken : token;
+      const endpoint = useWorkerAuth ? `${API_URL}/auth/worker/me` : `${API_URL}/auth/me`;
 
       if (!activeToken) {
         setUser(null);
@@ -109,7 +113,7 @@ export const WorkkarProvider = ({ children }) => {
           setUser(userData);
         } else {
           // Token is invalid/expired
-          if (isWorkerPath && workerToken) {
+          if (useWorkerAuth) {
             localStorage.removeItem('worker_token');
             setWorkerToken(null);
             setUser(null);
@@ -134,10 +138,12 @@ export const WorkkarProvider = ({ children }) => {
 
     const pollInterval = setInterval(async () => {
       const isWorkerPath = window.location.pathname.startsWith('/worker') || user.role === 'worker';
-      const activeToken = isWorkerPath && workerToken ? workerToken : token;
+      // Use workerToken if: on worker path, OR workerToken exists but no regular token
+      const useWorkerAuth = workerToken && (isWorkerPath || !token);
+      const activeToken = useWorkerAuth ? workerToken : token;
       if (!activeToken) return;
 
-      const endpoint = isWorkerPath ? `${API_URL}/auth/worker/me` : `${API_URL}/auth/me`;
+      const endpoint = useWorkerAuth ? `${API_URL}/auth/worker/me` : `${API_URL}/auth/me`;
 
       try {
         const res = await fetch(endpoint, {
