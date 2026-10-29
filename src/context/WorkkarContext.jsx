@@ -3,6 +3,7 @@ import {
   INITIAL_SERVICES,
   INITIAL_EARNINGS_TREND,
 } from '../data/mockData';
+import { getAssetUrl } from '../services/apiConfig';
 
 const WorkkarContext = createContext();
 
@@ -24,6 +25,7 @@ const parseJsonResponse = async (res) => {
     throw new Error('Invalid response from server.');
   }
 };
+
 
 export const WorkkarProvider = ({ children }) => {
   // Authentication states
@@ -258,7 +260,7 @@ export const WorkkarProvider = ({ children }) => {
     rating: w.rating || 5.0,
     rate: w.rate,
     availability: w.availability,
-    avatar: w.avatar || (w.profilePhoto ? (w.profilePhoto.startsWith('http') ? w.profilePhoto : `http://localhost:5000${w.profilePhoto}`) : null),
+    avatar: w.avatar || (w.profilePhoto ? getAssetUrl(w.profilePhoto) : null),
     textAvatar: w.textAvatar,
     verified: w.verified,
     status: w.status,

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorkkar } from '../context/WorkkarContext';
 import DashboardCard from '../components/DashboardCard';
+import { getAssetUrl } from '../services/apiConfig';
 
 export default function SupremeAdminDashboard() {
   const [selectedWorker, setSelectedWorker] = useState(null);
@@ -476,7 +477,7 @@ export default function SupremeAdminDashboard() {
                 <div className="w-14 h-14 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 shrink-0">
                   {selectedWorker.profilePhoto ? (
                     <img
-                      src={selectedWorker.profilePhoto.startsWith('http') ? selectedWorker.profilePhoto : `http://localhost:5000${selectedWorker.profilePhoto}`}
+                      src={getAssetUrl(selectedWorker.profilePhoto)}
                       alt={selectedWorker.name}
                       className="w-full h-full object-cover"
                     />
@@ -559,7 +560,7 @@ export default function SupremeAdminDashboard() {
                     </div>
                     {selectedWorker.aadhaarCard ? (
                       <a
-                        href={`http://localhost:5000${selectedWorker.aadhaarCard}`}
+                        href={getAssetUrl(selectedWorker.aadhaarCard)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-4 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl text-center shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer"
@@ -580,7 +581,7 @@ export default function SupremeAdminDashboard() {
                     </div>
                     {selectedWorker.panCard ? (
                       <a
-                        href={`http://localhost:5000${selectedWorker.panCard}`}
+                        href={getAssetUrl(selectedWorker.panCard)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-4 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl text-center shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer"
@@ -762,7 +763,7 @@ export default function SupremeAdminDashboard() {
                             src={
                               (selectedListItem.profilePhoto || selectedListItem.avatar).startsWith('http')
                                 ? (selectedListItem.profilePhoto || selectedListItem.avatar)
-                                : `http://localhost:5000${selectedListItem.profilePhoto || selectedListItem.avatar}`
+                                : getAssetUrl(selectedListItem.profilePhoto || selectedListItem.avatar)
                             }
                             alt={selectedListItem.name}
                             className="w-full h-full object-cover"
@@ -839,9 +840,7 @@ export default function SupremeAdminDashboard() {
                             {selectedListItem.aadhaarCard || selectedListItem.verificationDocument ? (
                               <a
                                 href={
-                                  (selectedListItem.aadhaarCard || selectedListItem.verificationDocument).startsWith('http')
-                                    ? (selectedListItem.aadhaarCard || selectedListItem.verificationDocument)
-                                    : `http://localhost:5000${selectedListItem.aadhaarCard || selectedListItem.verificationDocument}`
+                                  getAssetUrl(selectedListItem.aadhaarCard || selectedListItem.verificationDocument)
                                 }
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -859,9 +858,7 @@ export default function SupremeAdminDashboard() {
                             {selectedListItem.panCard ? (
                               <a
                                 href={
-                                  selectedListItem.panCard.startsWith('http')
-                                    ? selectedListItem.panCard
-                                    : `http://localhost:5000${selectedListItem.panCard}`
+                                  getAssetUrl(selectedListItem.panCard)
                                 }
                                 target="_blank"
                                 rel="noopener noreferrer"
