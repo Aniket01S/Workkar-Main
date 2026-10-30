@@ -110,13 +110,15 @@ export const updateWorkerProfile = async (req, res) => {
     }
 
     // Check files uploaded or already existing in database
+    // Cloudinary: multer-storage-cloudinary stores full HTTPS URL in file.path
     const profilePhotoFile = req.files?.profilePhoto?.[0];
     const aadhaarCardFile = req.files?.aadhaarCard?.[0];
     const panCardFile = req.files?.panCard?.[0];
 
-    const profilePhotoPath = profilePhotoFile ? `/uploads/profile/${profilePhotoFile.filename}` : worker.profilePhoto;
-    const aadhaarCardPath = aadhaarCardFile ? `/uploads/aadhaar/${aadhaarCardFile.filename}` : worker.aadhaarCard;
-    const panCardPath = panCardFile ? `/uploads/pan/${panCardFile.filename}` : worker.panCard;
+    // Use Cloudinary URL (file.path) or fallback to existing DB value
+    const profilePhotoPath = profilePhotoFile?.path || worker.profilePhoto;
+    const aadhaarCardPath = aadhaarCardFile?.path || worker.aadhaarCard;
+    const panCardPath = panCardFile?.path || worker.panCard;
 
     if (!profilePhotoPath) {
       errors.profilePhoto = 'Profile photo is required';

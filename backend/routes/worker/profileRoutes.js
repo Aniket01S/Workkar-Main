@@ -1,66 +1,65 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { getWorkerProfile, updateWorkerProfile } from '../../controllers/worker/profileController.js';
 import { protectWorker } from '../../middleware/workerAuth.js';
 
 const router = express.Router();
 
-// Configure multer storage with dynamic destinations
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    let dest = 'uploads/';
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Single Cloudinary storage — folder is set dynamically per field
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => {
+    let folder = 'workkar/misc';
+    let transformation = [];
+
     if (file.fieldname === 'profilePhoto') {
-      dest += 'profile/';
+      folder = 'workkar/profile';
+      transformation = [{ width: 400, height: 400, crop: 'fill', quality: 'auto' }];
     } else if (file.fieldname === 'aadhaarCard') {
-      dest += 'aadhaar/';
+      folder = 'workkar/aadhaar';
     } else if (file.fieldname === 'panCard') {
-      dest += 'pan/';
+      folder = 'workkar/pan';
     }
-    
-    // Ensure directory exists
-    fs.mkdirSync(dest, { recursive: true });
-    cb(null, dest);
+
+    return {
+      folder,
+      allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'webp'],
+      transformation,
+    };
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
 });
 
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // limit files to 5MB
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|pdf/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    
-    if (extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only JPEG, JPG, PNG images and PDF files are allowed!'));
-    }
-  }
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
 const uploadFields = upload.fields([
   { name: 'profilePhoto', maxCount: 1 },
   { name: 'aadhaarCard', maxCount: 1 },
-  { name: 'panCard', maxCount: 1 }
+  { name: 'panCard', maxCount: 1 },
 ]);
 
-// Wrapper for handling Multer errors
+// Wrapper for multer errors
 const handleMulterUpload = (req, res, next) => {
   uploadFields(req, res, (err) => {
     if (err) {
-      return res.status(400).json({ 
-        message: 'File upload error', 
-        errors: { 
+      return res.status(400).json({
+        message: 'File upload error',
+        errors: {
           profilePhoto: err.message,
           aadhaarCard: err.message,
-          panCard: err.message
-        } 
+          panCard: err.message,
+        },
       });
     }
     next();
