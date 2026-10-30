@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.js';
 import workerRoutes from './routes/workers.js';
@@ -10,7 +12,10 @@ import workerAuthRoutes from './routes/worker/authRoutes.js';
 import workerPermissionRoutes from './routes/worker/permissionRoutes.js';
 import workerProfileRoutes from './routes/worker/profileRoutes.js';
 import User from './models/User.js';
-import path from 'path';
+
+// ESM __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config();
@@ -28,8 +33,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve uploads statically
-app.use('/uploads', express.static('uploads'));
+// Serve uploads statically — use absolute path for Render/production compatibility
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
